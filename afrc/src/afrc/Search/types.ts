@@ -108,3 +108,10 @@ export interface Acquisition {
     date: number;
     details: string;
 }
+
+export interface SearchFilter {
+    id: string;
+    name: string;
+    type: string;
+    clear(): void;
+}
