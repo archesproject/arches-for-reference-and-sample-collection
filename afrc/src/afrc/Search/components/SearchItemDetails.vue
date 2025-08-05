@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { onMounted, inject, ref, watch } from "vue";
+import { onMounted, inject, ref, watch, provide, computed, nextTick } from "vue";
 import type { UnspecifiedObject, GenericObject } from "@/afrc/Search/types";
 import { fetchResourceData, fetchImageData } from "@/afrc/Search/api.ts";
 import type { Ref } from "vue";
 import Button from "primevue/button";
 import Carousel from "primevue/carousel";
+import ModularReport from '@/arches_modular_reports/ModularReport/ModularReport.vue';
 
 const resultSelected = inject("resultSelected") as Ref<string>;
 const resultsSelected = inject("resultsSelected") as Ref<string[]>;
@@ -20,6 +21,7 @@ const composition: Ref<Composition[]> = ref([]);
 const identifier: Ref<string> = ref("");
 const hasGeom: Ref<boolean> = ref(false);
 const placeNames: Ref<GenericObject[]> = ref([]);
+const reference = ref();
 
 interface Acquisition {
     person: string;
@@ -46,6 +48,8 @@ watch(showMap, () => {
 
 async function getData() {
     const resp = await fetchResourceData(resultSelected.value);
+    reference.value = resp;
+
     const imageResourceids = resp.resource["Digital Reference"]?.map(
         (tile: UnspecifiedObject) =>
             (tile["Digital Source"] as UnspecifiedObject)?.["resourceId"],
@@ -59,7 +63,7 @@ async function getData() {
     const currentPlace = resp.resource["current location"]?.["@display_value"];
     const currentLocationStatement =
         resp.resource["current location"]?.["current location_Statement"]?.[
-            "current location_Statement_content"
+        "current location_Statement_content"
         ]?.["@display_value"];
     const fullCurrentLocation = [currentPlace, currentLocationStatement]
         .filter((item) => item)
@@ -74,7 +78,7 @@ async function getData() {
         ]?.geojson;
     placeNames.value = resp.resource["Production "]?.[0][
         "Production_location"
-    ]?.["instance_details"].map((place: GenericObject) => ({
+    ]?.["instance_details"]?.map((place: GenericObject) => ({
         name: place.display_value,
         resourceid: place.resourceId,
     }));
@@ -90,7 +94,7 @@ async function getData() {
                 ?.map(
                     (statement: GenericObject) =>
                         statement?.[
-                            "Addition to Collection_Statement_content"
+                        "Addition to Collection_Statement_content"
                         ]?.["@display_value"],
                 )
                 .join(" "),
@@ -154,6 +158,9 @@ function zoomToSearchResult(resourceid: string, action: string) {
                     @click="clearResult()"
                 />
             </div>
+        </div>
+        <div v-if="reference">
+            <ModularReport report-config-name="Search Item Details" :resource-instance-id="resultSelected" :key="resultSelected" graph-slug="reference_and_sample_collection_item_1"></ModularReport>
         </div>
         <div class="description">
             <div class="value-header">Description</div>
@@ -309,7 +316,7 @@ function zoomToSearchResult(resourceid: string, action: string) {
                                             place.resourceid,
                                             'zoom',
                                         )
-                                    "
+                                        "
                                 />
                             </div>
                             <div v-if="hasGeom && showMap">
@@ -325,7 +332,7 @@ function zoomToSearchResult(resourceid: string, action: string) {
                                             place.resourceid,
                                             'search',
                                         )
-                                    "
+                                        "
                                 />
                             </div>
                         </div>
@@ -353,6 +360,7 @@ function zoomToSearchResult(resourceid: string, action: string) {
     height: 100%;
     background-color: #fff;
 }
+
 .title {
     display: flex;
     padding-top: 5px;
@@ -398,27 +406,41 @@ function zoomToSearchResult(resourceid: string, action: string) {
 .resource-details {
     padding: 10px;
 }
+
 .value-header {
     color: steelblue;
     font-size: 1.1em;
     font-weight: bold;
 }
+
 .value-entry {
     font-size: 1em;
     color: #888;
     padding: 0px 3px;
     line-height: 1.15;
 }
+
 .resource-details-value {
     color: #25476a;
     padding: 0px 3px;
 }
+
 .zoom-to-item {
     padding: 0 1rem;
     display: flex;
     justify-content: start;
 }
+
 .close-button:hover {
     color: #25476a;
+}
+
+:deep(.p-splitter.p-component.p-splitter-horizontal) {
+    position: inherit;
+}
+
+:deep(.linked-section-container) {
+    max-height: 52.5rem;
+    overflow-y: auto;
 }
 </style>
